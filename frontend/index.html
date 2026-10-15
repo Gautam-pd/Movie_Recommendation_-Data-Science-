@@ -1,0 +1,1221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍿</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PopcornStats | Explainable Movie Recommendation Engine</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+              heading: ['Outfit', 'sans-serif'],
+            },
+            colors: {
+              darkBg: "#0F172A",
+              cardBg: "#1E293B",
+              accentBlue: "#3B82F6",
+            }
+          }
+        }
+      }
+    </script>
+    
+    <!-- React & ReactDOM (Development – shows errors in console & on screen) -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- Recharts Dependencies (Prop-Types, D3, Recharts UMD) -->
+    <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+    
+    <!-- Babel Standalone (JSX compiler) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+      body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #0F172A;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        font-family: 'Outfit', sans-serif;
+      }
+      /* Glassmorphism custom styling utilities */
+      .glass-panel {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .glass-card-hover {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .glass-card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px -10px rgba(59, 130, 246, 0.3);
+        border-color: rgba(59, 130, 246, 0.4);
+      }
+    </style>
+  </head>
+  <body class="text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      // Global error catchers for debugging
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        console.error('GLOBAL JS ERROR:', msg, '\nURL:', url, '\nLine:', lineNo, '\nCol:', columnNo, '\nError:', error);
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#2d1b1b;color:#ff6b6b;padding:16px;font-family:monospace;font-size:13px;border-bottom:2px solid #ff6b6b;white-space:pre-wrap;';
+        errDiv.textContent = '⚠️ JS Error: ' + msg + '\nLine: ' + lineNo + ', Col: ' + columnNo + '\n' + (error && error.stack ? error.stack : '');
+        document.body.prepend(errDiv);
+        return false;
+      };
+      window.onunhandledrejection = function(event) {
+        console.error('UNHANDLED PROMISE REJECTION:', event.reason);
+      };
+
+      // Destructure Recharts components from global UMD bundle
+      const { 
+        BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+        ScatterChart, Scatter, ZAxis, Label 
+      } = window.Recharts || {};
+
+      // ----------------------------------------------------
+      // Inline SVG Icons (Lucide-based)
+      // ----------------------------------------------------
+      const SparklesIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/></svg>
+      );
+      const CompassIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+      );
+      const AlertCircleIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+      );
+      const RefreshCwIcon = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+      );
+      const StarIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-400 fill-current"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      );
+      const ChevronDownIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-slate-400"><path d="m6 9 6 6 6-6"/></svg>
+      );
+      const ChevronUpIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-slate-400"><path d="m18 15-6-6-6 6"/></svg>
+      );
+      const TagIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 text-blue-400"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l4.72-4.72c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M6 8h.01"/></svg>
+      );
+      const ArrowLeftIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+      );
+      const SettingsIcon = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      );
+      const AlertTriangleIcon = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+      );
+      const DatabaseIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+      );
+      const BarChart3Icon = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+      );
+      const InfoIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
+      );
+      const ShieldQuestionIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+      );
+      const FilmIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M17 3v18"/><path d="M3 7h4"/><path d="M3 17h4"/><path d="M17 17h4"/><path d="M17 7h4"/><path d="M7 12h10"/></svg>
+      );
+      const RotateCwIcon = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+      );
+      const HelpCircle = ({ className }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+      );
+
+
+      // ----------------------------------------------------
+      // API Clients
+      // ----------------------------------------------------
+      const api = {
+        async getGenres() {
+          const res = await fetch("/api/genres");
+          if (!res.ok) throw new Error("Failed to fetch genres");
+          return res.json();
+        },
+        async getRecommendations(payload) {
+          const res = await fetch("/api/recommendations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error("Failed to fetch recommendations");
+          return res.json();
+        },
+        async getInsights() {
+          const res = await fetch("/api/insights");
+          if (!res.ok) throw new Error("Failed to fetch insights");
+          return res.json();
+        }
+      };
+
+      // ----------------------------------------------------
+      // Component: GenreQuiz
+      // ----------------------------------------------------
+      function GenreQuiz({ onSubmit, isLoading }) {
+        const [availableGenres, setAvailableGenres] = React.useState([]);
+        const [selectedGenres, setSelectedGenres] = React.useState([]);
+        const [mood, setMood] = React.useState("Thought-provoking");
+        const [era, setEra] = React.useState("Any");
+        const [sliderVal, setSliderVal] = React.useState(50);
+        const [error, setError] = React.useState("");
+        const [loadingGenres, setLoadingGenres] = React.useState(true);
+
+        React.useEffect(() => {
+          api.getGenres()
+            .then(data => {
+              setAvailableGenres(data.genres);
+              setLoadingGenres(false);
+            })
+            .catch(err => {
+              console.error(err);
+              setError("Could not connect to backend server. Make sure FastAPI server is running.");
+              setLoadingGenres(false);
+            });
+        }, []);
+
+        const handleGenreToggle = (genre) => {
+          setError("");
+          if (selectedGenres.includes(genre)) {
+            setSelectedGenres(selectedGenres.filter(g => g !== genre));
+          } else {
+            if (selectedGenres.length >= 5) {
+              setError("You can select up to 5 genres.");
+              return;
+            }
+            setSelectedGenres([...selectedGenres, genre]);
+          }
+        };
+
+        const getPercentileUsed = (val) => Math.round(30 + val * 0.6);
+
+        const getSliderExplanation = (val) => {
+          const pct = getPercentileUsed(val);
+          if (val < 25) {
+            return `Hidden Gems Mode: Will search for lesser-known, highly rated movies (vote counts above the ${pct}th percentile of the catalog).`;
+          }
+          if (val > 75) {
+            return `Crowd Favorites Mode: Will strictly recommend popular hits with substantial ratings (vote counts above the ${pct}th percentile of the catalog).`;
+          }
+          return `Balanced Mode: Blends popular blockbusters and niche releases (vote counts above the ${pct}th percentile).`;
+        };
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (selectedGenres.length < 2) {
+            setError("Please select at least 2 primary genres (up to 5).");
+            return;
+          }
+          onSubmit({
+            genres: selectedGenres,
+            mood,
+            era,
+            gem_slider: Number(sliderVal)
+          });
+        };
+
+        if (loadingGenres) {
+          return (
+            <div className="flex flex-col items-center justify-center py-20">
+              <RefreshCwIcon className="animate-spin text-blue-500 w-12 h-12 mb-4" />
+              <p className="text-slate-400 text-lg">Retrieving dynamic genre vocabulary from dataset...</p>
+            </div>
+          );
+        }
+
+        return (
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-10 py-6">
+            <div className="text-center space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-semibold tracking-wider uppercase">
+                <SparklesIcon /> Interactive Profiler
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-indigo-200 to-purple-400 bg-clip-text text-transparent">
+                Personalize Your Recommendations
+              </h2>
+              <p className="text-slate-400 max-w-xl mx-auto text-base">
+                Configure the underlying content vectorizer and statistical Bayesian smoothing weights to generate math-backed recommendations.
+              </p>
+            </div>
+
+            {error && (
+              <div className="glass-panel border-red-500/30 bg-red-950/20 text-red-300 p-4 rounded-xl flex items-start gap-3">
+                <AlertCircleIcon />
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Q1: Genres */}
+            <div className="glass-panel p-6 sm:p-8 rounded-2xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/50 pb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 text-sm font-mono">1</span>
+                    Primary Genres
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Sets the primary target tokens for TF-IDF content similarity (Select 2 to 5)</p>
+                </div>
+                <span className="text-xs font-mono bg-slate-800 border border-slate-700 px-2 py-1 rounded text-slate-400 self-start sm:self-auto">
+                  Selected: {selectedGenres.length} / 5
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2.5 pt-2">
+                {availableGenres.map(genre => {
+                  const isSelected = selectedGenres.includes(genre);
+                  return (
+                    <button
+                      key={genre}
+                      type="button"
+                      onClick={() => handleGenreToggle(genre)}
+                      className={`px-4 py-2 text-sm font-medium rounded-xl border transition-all duration-200 hover:scale-[1.03] ${
+                        isSelected
+                          ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20"
+                          : "bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600"
+                      }`}
+                    >
+                      {genre}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Q2: Mood */}
+            <div className="glass-panel p-6 sm:p-8 rounded-2xl space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 border-b border-slate-700/50 pb-4">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 text-sm font-mono">2</span>
+                  What's the mood right now?
+                </h3>
+                <p className="text-xs text-slate-400 mt-1.5">Maps secondary genres added to the user-preference vector at half-weight (0.5)</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                {[
+                  { id: "Light & Fun", desc: "Comedy, Animation, Adventure" },
+                  { id: "Intense & Gripping", desc: "Thriller, Mystery, Crime, Film-Noir" },
+                  { id: "Thought-provoking", desc: "Sci-Fi, Drama, Documentary, War" }
+                ].map(item => {
+                  const isSelected = mood === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setMood(item.id)}
+                      className={`p-5 text-left rounded-xl border transition-all duration-200 flex flex-col justify-between ${
+                        isSelected
+                          ? "bg-indigo-600/90 border-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                          : "bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600"
+                      }`}
+                    >
+                      <span className="font-bold text-base">{item.id}</span>
+                      <span className={`text-xs mt-3 ${isSelected ? "text-indigo-200" : "text-slate-400"}`}>
+                        {item.desc}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Q3: Era */}
+            <div className="glass-panel p-6 sm:p-8 rounded-2xl space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 border-b border-slate-700/50 pb-4">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 text-sm font-mono">3</span>
+                  Release Era Preference
+                </h3>
+                <p className="text-xs text-slate-400 mt-1.5">Filters candidates by release year range (relaxes range dynamically by ±10 years if needed)</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                {[
+                  { id: "Classics (pre-2000)", label: "Pre-2000 Classics" },
+                  { id: "Modern (2000–2015)", label: "2000 - 2015 Moderns" },
+                  { id: "Recent (2015+)", label: "2015+ Recent Era" },
+                  { id: "Any", label: "No Era Limits (All)" }
+                ].map(item => {
+                  const isSelected = era === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setEra(item.id)}
+                      className={`p-4 text-center rounded-xl border text-sm font-medium transition-all duration-200 ${
+                        isSelected
+                          ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/20"
+                          : "bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Q4: Slider */}
+            <div className="glass-panel p-6 sm:p-8 rounded-2xl space-y-5">
+              <div>
+                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 border-b border-slate-700/50 pb-4">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 text-sm font-mono">4</span>
+                  Discovery Mode
+                </h3>
+                <p className="text-xs text-slate-400 mt-1.5">
+                  Sets the minimum-vote threshold percentile (<code className="text-blue-400 font-mono">m_param</code>). Allows low-vote gems to compete vs. requiring crowd-fav popularity blockbusters.
+                </p>
+              </div>
+              <div className="space-y-4 pt-2">
+                <div className="flex justify-between items-center text-sm font-mono">
+                  <span className="text-slate-400">Hidden Gems</span>
+                  <span className="text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded text-lg">
+                    {sliderVal}%
+                  </span>
+                  <span className="text-slate-400">Crowd Favorites</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={sliderVal}
+                  onChange={(e) => setSliderVal(e.target.value)}
+                  className="w-full h-2 rounded-lg bg-slate-800 accent-blue-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                />
+                <div className="glass-panel border-blue-500/20 bg-blue-950/10 p-4 rounded-xl">
+                  <p className="text-sm text-slate-300 leading-relaxed">
+                    {getSliderExplanation(sliderVal)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center pt-4">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-base shadow-xl shadow-blue-500/20 transition-all duration-300 hover:scale-[1.03] disabled:opacity-50 disabled:scale-100 flex items-center gap-3"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCwIcon className="w-5 h-5 animate-spin" />
+                    Recalculating score matrices...
+                  </>
+                ) : (
+                  <>
+                    <CompassIcon />
+                    Generate Recommendation Feed
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        );
+      }
+
+      // ----------------------------------------------------
+      // Component: ScoreBreakdown
+      // ----------------------------------------------------
+      function ScoreBreakdown({ movie, C_used, m_param_used }) {
+        const simContribution = movie.genre_similarity * 0.6;
+        const qualContribution = movie.quality_score * 0.4;
+        
+        return (
+          <div className="bg-slate-900/90 border border-slate-700/50 p-4 sm:p-5 rounded-xl space-y-4 text-xs font-mono mt-3">
+            <div className="flex items-center gap-1.5 text-blue-400 font-bold border-b border-slate-800 pb-2">
+              <InfoIcon /> Recommendation Math Breakdown
+            </div>
+            
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1">
+              <div className="text-slate-400 font-semibold">Blended Score Formula:</div>
+              <div className="text-slate-200 overflow-x-auto whitespace-nowrap">
+                Score = (0.6 × GenreSimilarity) + (0.4 × QualityScore)
+              </div>
+              <div className="text-slate-400 mt-2 font-semibold">Your Movie Calculation:</div>
+              <div className="text-slate-100 font-bold overflow-x-auto whitespace-nowrap">
+                {movie.final_score.toFixed(4)} = (0.6 × {movie.genre_similarity.toFixed(4)}) + (0.4 × {movie.quality_score.toFixed(4)})
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-300">1. Genre Similarity (60% Weight)</span>
+                  <span className="text-blue-400 font-bold">{(simContribution).toFixed(4)}</span>
+                </div>
+                <div className="space-y-1 text-[11px] text-slate-400">
+                  <p>• Cosine similarity between your vector & movie vector: <strong className="text-slate-200">{movie.genre_similarity.toFixed(4)}</strong></p>
+                  <p>• Matches: <strong className="text-blue-400">[{movie.matched_genres.join(", ") || "None"}]</strong></p>
+                  <p>• Math: <code className="bg-slate-950 px-1 rounded text-slate-300">cos(θ) = (A • B) / (||A|| ||B||)</code></p>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                  <div 
+                    className="bg-blue-500 h-full rounded-full" 
+                    style={{ width: `${movie.genre_similarity * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-300">2. Quality Score (40% Weight)</span>
+                  <span className="text-indigo-400 font-bold">{(qualContribution).toFixed(4)}</span>
+                </div>
+                <div className="space-y-1 text-[11px] text-slate-400">
+                  <p>• Precomputed global mean (C): <strong className="text-slate-200">{C_used.toFixed(4)}</strong></p>
+                  <p>• Vote count requirement (m): <strong className="text-slate-200">{m_param_used.toFixed(1)}</strong> ratings</p>
+                  <p>• Movie ratings: <strong className="text-slate-200">{movie.vote_count}</strong> votes | Avg: <strong className="text-slate-200">{movie.avg_rating.toFixed(2)}</strong></p>
+                  <p>• Weighted Rating (WR) calculated: <strong className="text-slate-200">{movie.weighted_rating.toFixed(4)}</strong></p>
+                  <p>• Min-Max normalisation: <strong className="text-indigo-300">{movie.quality_score.toFixed(4)}</strong></p>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                  <div 
+                    className="bg-indigo-500 h-full rounded-full" 
+                    style={{ width: `${movie.quality_score * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-[10px] text-slate-400 space-y-1">
+              <div className="font-bold text-slate-300">Bayesian Weighted Rating (IMDB Formula):</div>
+              <code className="block text-slate-200 py-1 overflow-x-auto whitespace-nowrap">
+                WR = [v / (v + m)] × R + [m / (v + m)] × C
+              </code>
+              <div className="pt-1">
+                WR = [{movie.vote_count} / ({movie.vote_count} + {m_param_used})] × {movie.avg_rating} + [{m_param_used} / ({movie.vote_count} + {m_param_used})] × {C_used.toFixed(4)} = <strong className="text-green-400">{movie.weighted_rating.toFixed(4)}</strong>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ----------------------------------------------------
+      // Component: MovieCard
+      // ----------------------------------------------------
+      function MovieCard({ movie, C_used, m_param_used }) {
+        const [expanded, setExpanded] = React.useState(false);
+
+        return (
+          <div className="glass-panel rounded-2xl overflow-hidden glass-card-hover border border-slate-800 flex flex-col h-full">
+            {/* Poster */}
+            <div className="relative h-64 overflow-hidden bg-slate-950">
+              <img
+                src={movie.poster_url}
+                alt={movie.title}
+                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
+              
+              {/* Score badge */}
+              <div className="absolute top-4 right-4 bg-slate-900/90 backdrop-blur border border-blue-500/30 px-3 py-1.5 rounded-xl flex flex-col items-center">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Match Score</span>
+                <span className="text-base font-extrabold text-blue-400">
+                  {(movie.final_score * 100).toFixed(1)}%
+                </span>
+              </div>
+              
+              {/* Year */}
+              {movie.year && (
+                <div className="absolute bottom-4 left-4 bg-slate-900/80 backdrop-blur px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 border border-slate-700/50">
+                  {movie.year}
+                </div>
+              )}
+            </div>
+
+            {/* Details */}
+            <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-slate-100 line-clamp-1 hover:line-clamp-none transition-all duration-150">
+                  {movie.title}
+                </h3>
+                
+                {/* Stats */}
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="flex items-center gap-1 text-amber-400 font-bold">
+                    <StarIcon />
+                    <span>{movie.avg_rating.toFixed(1)}</span>
+                  </div>
+                  <span className="text-slate-500">|</span>
+                  <div className="text-slate-400 text-xs">
+                    <span className="font-semibold text-slate-300">{movie.vote_count}</span> ratings
+                  </div>
+                </div>
+
+                {/* Matches */}
+                {movie.matched_genres.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] text-blue-400 font-bold mr-1 flex items-center gap-0.5">
+                      <TagIcon /> Matches:
+                    </span>
+                    {movie.matched_genres.map(g => (
+                      <span 
+                        key={g} 
+                        className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded-md"
+                      >
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex flex-wrap gap-1">
+                  {movie.genres.map(genre => (
+                    <span
+                      key={genre}
+                      className="text-[10px] bg-slate-800 border border-slate-700/60 text-slate-400 px-2 py-0.5 rounded-md"
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+
+                <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                  {movie.overview || "Overview not available."}
+                </p>
+                
+                <button
+                  type="button"
+                  onClick={() => setExpanded(!expanded)}
+                  className="w-full py-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 rounded-xl text-xs font-semibold text-slate-300 transition-colors flex items-center justify-center gap-2"
+                >
+                  {expanded ? (
+                    <>
+                      <ChevronUpIcon />
+                      Hide scoring formula
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDownIcon />
+                      Expose recommendation math
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {expanded && (
+              <div className="px-5 pb-5 border-t border-slate-800/80 bg-slate-950/20">
+                <ScoreBreakdown 
+                  movie={movie} 
+                  C_used={C_used} 
+                  m_param_used={m_param_used} 
+                />
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // ----------------------------------------------------
+      // Component: RecommendationFeed
+      // ----------------------------------------------------
+      function RecommendationFeed({ recommendations, onReset, queryParams }) {
+        const { results = [], era_relaxed = false, m_param_used = 0, percentile_used = 0, C_used = 0 } = recommendations || {};
+
+        return (
+          <div className="space-y-8 py-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+              <div className="space-y-1">
+                <button
+                  onClick={onReset}
+                  className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-bold transition-colors mb-2"
+                >
+                  <ArrowLeftIcon /> Adjust Profile Quiz
+                </button>
+                <h2 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
+                  🍿 Your Personalized Feed
+                </h2>
+                <p className="text-sm text-slate-400">
+                  Top 15 recommendations computed dynamically using TF-IDF & Bayesian weighted rating.
+                </p>
+              </div>
+              
+              <button
+                onClick={onReset}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-sm font-semibold rounded-xl transition-all duration-200 flex items-center gap-2 shrink-0 self-start md:self-auto"
+              >
+                <RotateCwIcon className="w-4 h-4" /> Retake Quiz
+              </button>
+            </div>
+
+            {/* Rec system configuration debug card */}
+            <div className="glass-panel p-5 rounded-2xl border border-blue-500/20 bg-blue-950/5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="space-y-1">
+                <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                  <SettingsIcon className="w-3.5 h-3.5 text-blue-400" /> C (Global Mean Rating)
+                </div>
+                <p className="text-lg font-bold text-slate-100">{(C_used || 0).toFixed(4)}</p>
+                <p className="text-[10px] text-slate-500">Calculated over all dataset ratings</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                  <SettingsIcon className="w-3.5 h-3.5 text-indigo-400" /> m_param (Vote Cutoff)
+                </div>
+                <p className="text-lg font-bold text-slate-100">{(m_param_used || 0).toFixed(1)} ratings</p>
+                <p className="text-[10px] text-slate-500">Set at the {percentile_used}% vote percentile</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                  Input Genres & Mood
+                </div>
+                <p className="text-sm font-bold text-slate-200 truncate">
+                  {queryParams.genres.join(", ")}
+                </p>
+                <p className="text-[10px] text-slate-500">Mood: "{queryParams.mood}" (+0.5 weight)</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                  Era Filter Range
+                </div>
+                <p className="text-sm font-bold text-slate-200">
+                  {queryParams.era}
+                </p>
+                <p className="text-[10px] text-slate-500">
+                  {era_relaxed ? (
+                    <span className="text-amber-400 font-semibold flex items-center gap-0.5">
+                      <AlertTriangleIcon className="w-3 h-3 shrink-0" /> Relaxed (±10 years)
+                    </span>
+                  ) : (
+                    "Strict search boundary"
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Warning message for relaxed era search */}
+            {era_relaxed && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs rounded-xl flex items-start gap-2.5">
+                <AlertTriangleIcon className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+                <div>
+                  <strong className="font-bold">Transparency Alert:</strong> The requested era filters yielded fewer than 20 candidate matches. 
+                  To prevent return starvation, the engine automatically relaxed the release boundaries by ±10 years.
+                </div>
+              </div>
+            )}
+
+            {/* Grid List */}
+            {results.length === 0 ? (
+              <div className="text-center py-20 bg-slate-800/20 rounded-2xl border border-slate-800">
+                <p className="text-slate-400 text-lg">No movies matched the current filters. Please broaden your selection criteria.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {results.map((movie) => (
+                  <MovieCard 
+                    key={movie.movieId} 
+                    movie={movie} 
+                    C_used={C_used} 
+                    m_param_used={m_param_used} 
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // ----------------------------------------------------
+      // Component: InsightsDashboard
+      // ----------------------------------------------------
+      function InsightsDashboard({ recommendations }) {
+        const [insights, setInsights] = React.useState(null);
+        const [isLoading, setIsLoading] = React.useState(true);
+        const [error, setError] = React.useState("");
+
+        React.useEffect(() => {
+          api.getInsights()
+            .then(data => {
+              setInsights(data);
+              setIsLoading(false);
+            })
+            .catch(err => {
+              console.error(err);
+              setError("Could not load insights. Ensure eda.py has been run to generate statistics.");
+              setIsLoading(false);
+            });
+        }, []);
+
+        if (isLoading) {
+          return (
+            <div className="flex flex-col items-center justify-center py-20">
+              <RefreshCwIcon className="animate-spin text-indigo-500 w-12 h-12 mb-4" />
+              <p className="text-slate-400">Loading dataset distribution statistics...</p>
+            </div>
+          );
+        }
+
+        if (error || !insights) {
+          return (
+            <div className="glass-panel p-6 rounded-2xl border-red-500/30 text-center max-w-xl mx-auto my-10 space-y-4">
+              <p className="text-red-400">{error || "Insights dashboard unavailable."}</p>
+              <p className="text-xs text-slate-400">
+                Make sure to run <code className="bg-slate-950 px-1 rounded text-red-300">python -m backend.analysis.eda</code> on the server.
+              </p>
+            </div>
+          );
+        }
+
+        const genreChartData = Object.entries(insights.genre_counts)
+          .map(([genre, count]) => ({ genre, count }))
+          .slice(0, 10);
+
+        const ratingChartData = insights.rating_histogram.bins.map((bin, index) => ({
+          rating: bin.toFixed(1),
+          count: insights.rating_histogram.counts[index]
+        }));
+
+        const recommendedIds = new Set(
+          recommendations ? recommendations.results.map(r => r.movieId) : []
+        );
+
+        const catalogScatter = insights.vote_vs_rating_sample
+          .filter(item => !recommendedIds.has(item.movieId))
+          .map(item => ({
+            ...item,
+            type: "Catalog Movie",
+            size: 4
+          }));
+
+        const recommendedScatter = recommendations
+          ? recommendations.results.map(movie => ({
+              movieId: movie.movieId,
+              title: movie.title,
+              vote_count: movie.vote_count,
+              avg_rating: movie.avg_rating,
+              type: "Recommended Movie",
+              size: 15
+            }))
+          : [];
+
+        const CustomScatterTooltip = ({ active, payload }) => {
+          if (active && payload && payload.length) {
+            const data = payload[0].payload;
+            return (
+              <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg font-mono text-xs shadow-2xl">
+                <p className="font-bold text-slate-200">{data.title}</p>
+                <p className="text-slate-400 mt-1">Avg Rating: <span className="text-slate-200">{data.avg_rating.toFixed(2)}</span></p>
+                <p className="text-slate-400">Vote Count: <span className="text-slate-200">{data.vote_count}</span></p>
+                <p className={`font-semibold mt-1.5 ${data.type === "Recommended Movie" ? "text-cyan-400" : "text-slate-500"}`}>
+                  {data.type}
+                </p>
+              </div>
+            );
+          }
+          return null;
+        };
+
+        return (
+          <div className="space-y-8 py-6">
+            <div className="border-b border-slate-800 pb-4">
+              <h2 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
+                <BarChart3Icon className="text-indigo-500 w-6 h-6" /> Dataset Insights & Math Parameters
+              </h2>
+              <p className="text-sm text-slate-400 mt-1">
+                Explore the statistical structure of the MovieLens catalog and inspect dynamic mathematical values.
+              </p>
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl">
+                  <DatabaseIcon />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Catalog Movies</p>
+                  <p className="text-2xl font-black text-slate-100">
+                    {insights.dataset_summary.num_movies.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
+                <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
+                  <BarChart3Icon className="text-indigo-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Ratings</p>
+                  <p className="text-2xl font-black text-slate-100">
+                    {insights.dataset_summary.num_ratings.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
+                <div className="p-3 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Unique Reviewers</p>
+                  <p className="text-2xl font-black text-slate-100">
+                    {insights.dataset_summary.num_users.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
+                <div className="p-3 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl">
+                  <HelpCircle className="w-6 h-6 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Global Average C</p>
+                  <p className="text-2xl font-black text-slate-100">
+                    {insights.C_global_mean.toFixed(4)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Recharts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="glass-panel p-6 rounded-2xl space-y-4">
+                <h3 className="text-base font-bold text-slate-200">Top 10 Genres in MovieLens</h3>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={genreChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+                      <XAxis dataKey="genre" stroke="#94A3B8" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: "#0F172A", borderColor: "#334155", color: "#F8FAFC", fontFamily: "monospace" }} 
+                        itemStyle={{ color: "#60A5FA" }}
+                      />
+                      <Bar dataKey="count" fill="url(#blueGradient)" radius={[4, 4, 0, 0]} />
+                      <defs>
+                        <linearGradient id="blueGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#1E40AF" stopOpacity={0.2}/>
+                        </linearGradient>
+                      </defs>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="glass-panel p-6 rounded-2xl space-y-4">
+                <h3 className="text-base font-bold text-slate-200">Global Ratings Frequencies Histogram</h3>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={ratingChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+                      <XAxis dataKey="rating" stroke="#94A3B8" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: "#0F172A", borderColor: "#334155", color: "#F8FAFC", fontFamily: "monospace" }} 
+                        itemStyle={{ color: "#A78BFA" }}
+                      />
+                      <Bar dataKey="count" fill="url(#purpleGradient)" radius={[4, 4, 0, 0]} />
+                      <defs>
+                        <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#5B21B6" stopOpacity={0.2}/>
+                        </linearGradient>
+                      </defs>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Scatter */}
+            <div className="glass-panel p-6 rounded-2xl space-y-5">
+              <div>
+                <h3 className="text-base font-bold text-slate-200 flex items-center gap-2">
+                  <span className="text-cyan-400 font-bold mr-1 flex items-center gap-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+                  </span>
+                  Ratings vs. Vote Counts Distribution
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  This scatter plot contrasts the average rating (X-axis) against the total vote count (Y-axis).
+                  {recommendations && (
+                    <span className="text-cyan-400 font-bold ml-1">
+                      Your 15 recommendations are mapped in neon blue to illustrate their relative ranking.
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: -10 }}>
+                    <CartesianGrid stroke="#1E293B" />
+                    <XAxis 
+                      type="number" 
+                      dataKey="avg_rating" 
+                      name="avg_rating" 
+                      domain={[0.5, 5.0]} 
+                      stroke="#94A3B8" 
+                      fontSize={10} 
+                      tickLine={false}
+                    >
+                      <Label value="Average Rating (R)" offset={-10} position="insideBottom" stroke="#94A3B8" fontSize={11} />
+                    </XAxis>
+                    <YAxis 
+                      type="number" 
+                      dataKey="vote_count" 
+                      name="vote_count" 
+                      stroke="#94A3B8" 
+                      fontSize={10} 
+                      tickLine={false}
+                    >
+                      <Label value="Vote Count (v)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} stroke="#94A3B8" fontSize={11} />
+                    </YAxis>
+                    <ZAxis type="number" dataKey="size" range={[20, 150]} />
+                    <Tooltip content={<CustomScatterTooltip />} />
+                    
+                    <Scatter 
+                      name="Catalog Catalog" 
+                      data={catalogScatter} 
+                      fill="#475569" 
+                      fillOpacity={0.4} 
+                    />
+                    
+                    {recommendedScatter.length > 0 && (
+                      <Scatter 
+                        name="Your Recommendations" 
+                        data={recommendedScatter} 
+                        fill="#22D3EE" 
+                        stroke="#0891B2"
+                        strokeWidth={2}
+                        fillOpacity={0.9} 
+                      />
+                    )}
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Explanation */}
+            <div className="glass-panel p-6 rounded-2xl bg-indigo-950/15 border border-indigo-500/20 space-y-4">
+              <h3 className="text-base font-bold text-indigo-300 flex items-center gap-2">
+                <ShieldQuestionIcon /> Explaining the Analytical Pipeline
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-300 leading-relaxed">
+                <div className="space-y-3">
+                  <h4 className="font-bold text-slate-200">1. TF-IDF Genre Vectorization</h4>
+                  <p>
+                    Rather than matching genres as arbitrary labels, the recommender fits a Term Frequency-Inverse Document Frequency (TF-IDF) vectorizer. 
+                    Genres that are rare across the dataset (e.g. <i>Film-Noir</i>, <i>IMAX</i>) carry higher weighting. 
+                    The user profile builds a matching vector (giving primary genres weight 1.0, secondary mood genres 0.5) and projects it into the shared TF-IDF space. 
+                    Cosine similarity is then calculated to score matching features.
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <h4 className="font-bold text-slate-200">2. Bayesian Quality Smoothing</h4>
+                  <p>
+                    Simple average ratings are highly volatile for movies with low vote counts. 
+                    We calculate an <b>IMDB Weighted Rating (WR)</b>, which acts as a Bayesian average. 
+                    The minimum vote cutoff <code className="text-indigo-400 font-mono">m</code> is calculated dynamically based on your slider selection (percentiles 30% to 90%). 
+                    This rating is min-max normalized across candidates, and combined with genre matching using a 60/40 blend.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ----------------------------------------------------
+      // Component: App
+      // ----------------------------------------------------
+      function App() {
+        const [activeTab, setActiveTab] = React.useState("quiz");
+        const [recommendations, setRecommendations] = React.useState(null);
+        const [queryParams, setQueryParams] = React.useState(null);
+        const [isLoading, setIsLoading] = React.useState(false);
+        const [error, setError] = React.useState("");
+
+        const handleQuizSubmit = async (params) => {
+          setIsLoading(true);
+          setError("");
+          setQueryParams(params);
+          console.log('[PopcornStats] Submitting quiz with params:', JSON.stringify(params));
+
+          try {
+            const data = await api.getRecommendations(params);
+            console.log('[PopcornStats] API response received:', {
+              keys: Object.keys(data),
+              numResults: data.results ? data.results.length : 'NO_RESULTS_KEY',
+              C_used: data.C_used,
+              m_param_used: data.m_param_used,
+              percentile_used: data.percentile_used,
+              era_relaxed: data.era_relaxed
+            });
+            // Validate response structure before setting state
+            if (!data || typeof data !== 'object') {
+              throw new Error('API returned invalid data: ' + typeof data);
+            }
+            if (!Array.isArray(data.results)) {
+              throw new Error('API response missing results array. Keys: ' + Object.keys(data).join(', '));
+            }
+            setRecommendations(data);
+            setActiveTab("feed");
+          } catch (err) {
+            console.error('[PopcornStats] Error:', err);
+            setError("Recommendation generation failed: " + (err.message || "Ensure backend server is online."));
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        const handleReset = () => {
+          setRecommendations(null);
+          setQueryParams(null);
+          setActiveTab("quiz");
+        };
+
+        return (
+          <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans transition-colors duration-300">
+            <header className="sticky top-0 z-50 bg-[#0F172A]/80 backdrop-blur-md border-b border-slate-800">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={handleReset}>
+                  <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-blue-500/10">
+                    <FilmIcon />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-1.5 font-sans">
+                      PopcornStats <span className="text-xs text-blue-400 font-mono font-semibold px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md">Demo</span>
+                    </h1>
+                    <p className="text-[10px] text-slate-400 font-medium">Explainable Recommendation Engine</p>
+                  </div>
+                </div>
+
+                <nav className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (recommendations) {
+                        setActiveTab("feed");
+                      } else {
+                        setActiveTab("quiz");
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
+                      activeTab === "quiz" || activeTab === "feed"
+                        ? "bg-slate-800 text-blue-400 border border-slate-700/60 shadow-lg shadow-blue-500/5"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <SparklesIcon /> Recommender
+                  </button>
+                  
+                  <button
+                    onClick={() => setActiveTab("insights")}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
+                      activeTab === "insights"
+                        ? "bg-slate-800 text-indigo-400 border border-slate-700/60 shadow-lg shadow-indigo-500/5"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <BarChart3Icon className="w-4 h-4 shrink-0" /> Insights
+                  </button>
+                </nav>
+              </div>
+            </header>
+
+            <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              {error && (
+                <div className="glass-panel border-red-500/30 bg-red-950/20 text-red-300 p-4 rounded-xl flex items-center gap-3 mb-6">
+                  <AlertCircleIcon />
+                  <span className="text-sm font-semibold">{error}</span>
+                </div>
+              )}
+
+              {activeTab === "quiz" && (
+                <GenreQuiz onSubmit={handleQuizSubmit} isLoading={isLoading} />
+              )}
+              
+              {activeTab === "feed" && recommendations && (
+                <RecommendationFeed 
+                  recommendations={recommendations} 
+                  queryParams={queryParams} 
+                  onReset={handleReset} 
+                />
+              )}
+              
+              {activeTab === "insights" && (
+                <InsightsDashboard recommendations={recommendations} />
+              )}
+            </main>
+
+            <footer className="bg-slate-950/80 border-t border-slate-900 py-6 text-center text-xs text-slate-500">
+              <div className="max-w-7xl mx-auto px-4 space-y-2">
+                <p>
+                  PopcornStats is an educational data-analysis portfolio demonstration.
+                </p>
+                <p>
+                  Data sourced from <a href="https://grouplens.org/datasets/movielens/" target="_blank" rel="noreferrer" className="text-slate-400 hover:underline">MovieLens</a> & optional poster metadata via <a href="https://themoviedb.org" target="_blank" rel="noreferrer" className="text-slate-400 hover:underline">TMDB API</a>.
+                </p>
+              </div>
+            </footer>
+          </div>
+        );
+      }
+
+      // Error Boundary to catch and display render crashes
+      class ErrorBoundary extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = { hasError: false, error: null, errorInfo: null };
+        }
+        static getDerivedStateFromError(error) {
+          return { hasError: true, error };
+        }
+        componentDidCatch(error, errorInfo) {
+          console.error("React ErrorBoundary caught:", error, errorInfo);
+          this.setState({ errorInfo });
+        }
+        render() {
+          if (this.state.hasError) {
+            return (
+              <div style={{padding:'40px',fontFamily:'monospace',color:'#ff6b6b',backgroundColor:'#1a1a2e',minHeight:'100vh'}}>
+                <h1 style={{fontSize:'24px',marginBottom:'16px'}}>⚠️ React Render Error</h1>
+                <pre style={{whiteSpace:'pre-wrap',wordBreak:'break-word',color:'#ffa07a',fontSize:'14px'}}>
+                  {this.state.error && this.state.error.toString()}
+                </pre>
+                <h2 style={{fontSize:'18px',marginTop:'24px',color:'#74b9ff'}}>Component Stack:</h2>
+                <pre style={{whiteSpace:'pre-wrap',wordBreak:'break-word',color:'#a29bfe',fontSize:'12px'}}>
+                  {this.state.errorInfo && this.state.errorInfo.componentStack}
+                </pre>
+              </div>
+            );
+          }
+          return this.props.children;
+        }
+      }
+
+      // Render the App component
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<ErrorBoundary><App /></ErrorBoundary>);
+    </script>
+  </body>
+</html>
