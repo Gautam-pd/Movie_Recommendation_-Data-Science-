@@ -3,6 +3,7 @@ import json
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from backend.config import settings
 from backend.analysis.recommender import MovieRecommender
 from backend.routers import genres, recommendations, insights
@@ -49,38 +50,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
+# Include API routers FIRST — these must take priority over static file serving
 app.include_router(genres.router)
 app.include_router(recommendations.router)
 app.include_router(insights.router)
 
-from fastapi.responses import FileResponse
-
-# Serve index.html at root
-@app.get("/")
-def serve_index():
-    index_path = os.path.join(settings.BASE_DIR, "..", "frontend", "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"status": "online", "message": "Backend running, but frontend/index.html is missing."}
-
-# Serve static files from frontend folder (e.g. JS, CSS, images)
-@app.get("/{path:path}")
-def serve_static_files(path: str):
-    # Prevent path traversal
-    clean_path = os.path.normpath(path).lstrip("./\\")
-    file_path = os.path.join(settings.BASE_DIR, "..", "frontend", clean_path)
-    
-    if os.path.exists(file_path) and os.path.isfile(file_path):
-        return FileResponse(file_path)
-        
-    # Fallback to index.html for React SPA routing
-    index_path = os.path.join(settings.BASE_DIR, "..", "frontend", "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-        
-    raise HTTPException(status_code=404, detail="File not found")
+# Mount the frontend directory as static files LAST, so API routes are never shadowed.
+# html=True enables SPA-style fallback: serves index.html for any path that doesn't
+# match a real file, which lets the React app handle its own routing.
+FRONTEND_DIR = os.path.normpath(os.path.join(settings.BASE_DIR, "..", "frontend"))
+if os.path.isdir(FRONTEND_DIR):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+else:
+    # Fallback if frontend dir is missing — at least show a status message
+    @app.get("/")
+    def root_fallback():
+        return {"status": "online", "message": "Backend running, but frontend/ directory is missing."}
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
+

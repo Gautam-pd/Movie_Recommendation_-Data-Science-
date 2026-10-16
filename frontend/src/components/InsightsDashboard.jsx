@@ -27,8 +27,8 @@ export default function InsightsDashboard({ recommendations }) {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <Activity className="animate-spin text-indigo-500 w-12 h-12 mb-4" />
-        <p className="text-slate-400">Loading dataset distribution statistics...</p>
+        <Activity className="animate-spin text-[#77c940] w-12 h-12 mb-4" />
+        <p className="text-[#778d7e]">Loading dataset distribution statistics...</p>
       </div>
     );
   }
@@ -37,8 +37,8 @@ export default function InsightsDashboard({ recommendations }) {
     return (
       <div className="glass-panel p-6 rounded-2xl border-red-500/30 text-center max-w-xl mx-auto my-10 space-y-4">
         <p className="text-red-400">{error || "Insights dashboard unavailable."}</p>
-        <p className="text-xs text-slate-400">
-          Make sure to run <code className="bg-slate-950 px-1 rounded text-red-300">python -m backend.analysis.eda</code> on the server to precompute the dashboard data.
+        <p className="text-xs text-[#778d7e]">
+          Make sure to run <code className="bg-black px-1 rounded text-red-300">python -m backend.analysis.eda</code> on the server to precompute the dashboard data.
         </p>
       </div>
     );
@@ -56,12 +56,11 @@ export default function InsightsDashboard({ recommendations }) {
   }));
 
   // Scatter plot data mapping
-  // Build a list of recommended movieIds for easy checking
   const recommendedIds = new Set(
     recommendations ? recommendations.results.map(r => r.movieId) : []
   );
 
-  // Background catalog scatter data (excluding active recommendations to prevent duplicate overlay)
+  // Background catalog scatter data
   const catalogScatter = insights.vote_vs_rating_sample
     .filter(item => !recommendedIds.has(item.movieId))
     .map(item => ({
@@ -86,11 +85,11 @@ export default function InsightsDashboard({ recommendations }) {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg font-mono text-xs shadow-2xl">
-          <p className="font-bold text-slate-200">{data.title}</p>
-          <p className="text-slate-400 mt-1">Avg Rating: <span className="text-slate-200">{data.avg_rating.toFixed(2)}</span></p>
-          <p className="text-slate-400">Vote Count: <span className="text-slate-200">{data.vote_count}</span></p>
-          <p className={`font-semibold mt-1.5 ${data.type === "Recommended Movie" ? "text-cyan-400" : "text-slate-500"}`}>
+        <div className="bg-[#050b05] border border-[#193d05] p-3 rounded-xl font-mono text-xs shadow-2xl">
+          <p className="font-bold text-[#cdffb8]">{data.title}</p>
+          <p className="text-[#778d7e] mt-1">Avg Rating: <span className="text-[#cdffb8]">{data.avg_rating.toFixed(2)}</span></p>
+          <p className="text-[#778d7e]">Vote Count: <span className="text-[#cdffb8]">{data.vote_count}</span></p>
+          <p className={`font-semibold mt-1.5 ${data.type === "Recommended Movie" ? "text-[#77c940]" : "text-[#778d7e]"}`}>
             {data.type}
           </p>
         </div>
@@ -101,60 +100,60 @@ export default function InsightsDashboard({ recommendations }) {
 
   return (
     <div className="space-y-8 py-6">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-indigo-500" /> Dataset Insights & Math Parameters
+      <div className="border-b border-[#081802] pb-4">
+        <h2 className="text-2xl font-extrabold text-[#cdffb8] flex items-center gap-2">
+          <BarChart3 className="w-6 h-6 text-[#77c940]" /> Dataset Insights & Math Parameters
         </h2>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm text-[#778d7e] mt-1">
           Explore the statistical structure of the MovieLens catalog and inspect dynamic mathematical values.
         </p>
       </div>
 
       {/* Summary Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
-          <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl">
+        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 bg-[#050b05] border border-[#081802]">
+          <div className="p-3 bg-[#0e240a] border border-[#1c4514] text-[#a5d98d] rounded-2xl">
             <Database className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Catalog Movies</p>
-            <p className="text-2xl font-black text-slate-100">
+            <p className="text-xs text-[#778d7e] font-semibold uppercase tracking-wider">Catalog Movies</p>
+            <p className="text-2xl font-black text-white">
               {insights.dataset_summary.num_movies.toLocaleString()}
             </p>
           </div>
         </div>
 
-        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
-          <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
-            <BarChart3 className="w-6 h-6" />
+        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 bg-[#050b05] border border-[#081802]">
+          <div className="p-3 bg-[#0e240a] border border-[#1c4514] text-[#a5d98d] rounded-2xl">
+            <BarChart3 className="w-6 h-6 text-[#a5d98d]" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Ratings</p>
-            <p className="text-2xl font-black text-slate-100">
+            <p className="text-xs text-[#778d7e] font-semibold uppercase tracking-wider">Total Ratings</p>
+            <p className="text-2xl font-black text-white">
               {insights.dataset_summary.num_ratings.toLocaleString()}
             </p>
           </div>
         </div>
 
-        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
-          <div className="p-3 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-xl">
+        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 bg-[#050b05] border border-[#081802]">
+          <div className="p-3 bg-[#0e240a] border border-[#1c4514] text-[#a5d98d] rounded-2xl">
             <Activity className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Unique Reviewers</p>
-            <p className="text-2xl font-black text-slate-100">
+            <p className="text-xs text-[#778d7e] font-semibold uppercase tracking-wider">Unique Reviewers</p>
+            <p className="text-2xl font-black text-white">
               {insights.dataset_summary.num_users.toLocaleString()}
             </p>
           </div>
         </div>
 
-        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
-          <div className="p-3 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl">
-            <HelpCircle className="w-6 h-6" />
+        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 bg-[#050b05] border border-[#081802]">
+          <div className="p-3 bg-[#0e240a] border border-[#1c4514] text-[#a5d98d] rounded-2xl">
+            <HelpCircle className="w-6 h-6 text-[#a5d98d]" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Global Average C</p>
-            <p className="text-2xl font-black text-slate-100">
+            <p className="text-xs text-[#778d7e] font-semibold uppercase tracking-wider">Global Average C</p>
+            <p className="text-2xl font-black text-white">
               {insights.C_global_mean.toFixed(4)}
             </p>
           </div>
@@ -165,22 +164,22 @@ export default function InsightsDashboard({ recommendations }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Genre Frequency */}
         <div className="glass-panel p-6 rounded-2xl space-y-4">
-          <h3 className="text-base font-bold text-slate-200">Top 10 Genres in MovieLens</h3>
+          <h3 className="text-base font-bold text-[#cdffb8]">Top 10 Genres in MovieLens</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={genreChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                <XAxis dataKey="genre" stroke="#94A3B8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#0e5d04" strokeOpacity={0.4} vertical={false} />
+                <XAxis dataKey="genre" stroke="#40702e" fontSize={11} tickLine={false} />
+                <YAxis stroke="#40702e" fontSize={11} tickLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: "#0F172A", borderColor: "#334155", color: "#F8FAFC", fontFamily: "monospace" }} 
-                  itemStyle={{ color: "#60A5FA" }}
+                  contentStyle={{ backgroundColor: "#050b05", borderColor: "#193d05", color: "#cdffb8", fontFamily: "var(--font-mono)", borderRadius: "0.75rem" }} 
+                  itemStyle={{ color: "#77c940" }}
                 />
-                <Bar dataKey="count" fill="url(#blueGradient)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="url(#greenGradientSrc)" radius={[6, 6, 0, 0]} />
                 <defs>
-                  <linearGradient id="blueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#1E40AF" stopOpacity={0.2}/>
+                  <linearGradient id="greenGradientSrc" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#77c940" stopOpacity={0.9}/>
+                    <stop offset="95%" stopColor="#0e5d04" stopOpacity={0.3}/>
                   </linearGradient>
                 </defs>
               </BarChart>
@@ -190,22 +189,22 @@ export default function InsightsDashboard({ recommendations }) {
 
         {/* Rating Distribution */}
         <div className="glass-panel p-6 rounded-2xl space-y-4">
-          <h3 className="text-base font-bold text-slate-200">Global Ratings Frequencies Histogram</h3>
+          <h3 className="text-base font-bold text-[#cdffb8]">Global Ratings Frequencies Histogram</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={ratingChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                <XAxis dataKey="rating" stroke="#94A3B8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#0e5d04" strokeOpacity={0.4} vertical={false} />
+                <XAxis dataKey="rating" stroke="#40702e" fontSize={11} tickLine={false} />
+                <YAxis stroke="#40702e" fontSize={11} tickLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: "#0F172A", borderColor: "#334155", color: "#F8FAFC", fontFamily: "monospace" }} 
-                  itemStyle={{ color: "#A78BFA" }}
+                  contentStyle={{ backgroundColor: "#050b05", borderColor: "#193d05", color: "#cdffb8", fontFamily: "var(--font-mono)", borderRadius: "0.75rem" }} 
+                  itemStyle={{ color: "#68df07" }}
                 />
-                <Bar dataKey="count" fill="url(#purpleGradient)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="url(#limeGradientSrc)" radius={[6, 6, 0, 0]} />
                 <defs>
-                  <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#5B21B6" stopOpacity={0.2}/>
+                  <linearGradient id="limeGradientSrc" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#68df07" stopOpacity={0.9}/>
+                    <stop offset="95%" stopColor="#1e5809" stopOpacity={0.3}/>
                   </linearGradient>
                 </defs>
               </BarChart>
@@ -217,14 +216,14 @@ export default function InsightsDashboard({ recommendations }) {
       {/* Catalog Distribution Scatter plot with overlay highlights */}
       <div className="glass-panel p-6 rounded-2xl space-y-5">
         <div>
-          <h3 className="text-base font-bold text-slate-200 flex items-center gap-2">
-            <ScatterIcon className="w-5 h-5 text-cyan-400" /> Ratings vs. Vote Counts Distribution
+          <h3 className="text-base font-bold text-[#cdffb8] flex items-center gap-2">
+            <ScatterIcon className="w-5 h-5 text-[#77c940]" /> Ratings vs. Vote Counts Distribution
           </h3>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-[#778d7e] mt-1">
             This scatter plot contrasts the average rating (X-axis) against the total vote count (Y-axis) for top movies.
             {recommendations && (
-              <span className="text-cyan-400 font-bold ml-1">
-                Your 15 recommendations are mapped in neon blue to illustrate their relative ranking.
+              <span className="text-[#77c940] font-bold ml-1">
+                Your recommendations are highlighted in green.
               </span>
             )}
           </p>
@@ -233,27 +232,27 @@ export default function InsightsDashboard({ recommendations }) {
         <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: -10 }}>
-              <CartesianGrid stroke="#1E293B" />
+              <CartesianGrid stroke="#0e5d04" strokeOpacity={0.3} />
               <XAxis 
                 type="number" 
                 dataKey="avg_rating" 
                 name="avg_rating" 
                 domain={[0.5, 5.0]} 
-                stroke="#94A3B8" 
+                stroke="#40702e" 
                 fontSize={10} 
                 tickLine={false}
               >
-                <Label value="Average Rating (R)" offset={-10} position="insideBottom" stroke="#94A3B8" fontSize={11} />
+                <Label value="Average Rating (R)" offset={-10} position="insideBottom" stroke="#778d7e" fontSize={11} />
               </XAxis>
               <YAxis 
                 type="number" 
                 dataKey="vote_count" 
                 name="vote_count" 
-                stroke="#94A3B8" 
+                stroke="#40702e" 
                 fontSize={10} 
                 tickLine={false}
               >
-                <Label value="Vote Count (v)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} stroke="#94A3B8" fontSize={11} />
+                <Label value="Vote Count (v)" angle={-90} position="insideLeft" style={{ textAnchor: 'middle' }} stroke="#778d7e" fontSize={11} />
               </YAxis>
               <ZAxis type="number" dataKey="size" range={[20, 150]} />
               <Tooltip content={<CustomScatterTooltip />} />
@@ -262,7 +261,7 @@ export default function InsightsDashboard({ recommendations }) {
               <Scatter 
                 name="Catalog Catalog" 
                 data={catalogScatter} 
-                fill="#475569" 
+                fill="#1e5809" 
                 fillOpacity={0.4} 
               />
               
@@ -271,10 +270,10 @@ export default function InsightsDashboard({ recommendations }) {
                 <Scatter 
                   name="Your Recommendations" 
                   data={recommendedScatter} 
-                  fill="#22D3EE" 
-                  stroke="#0891B2"
-                  strokeWidth={2}
-                  fillOpacity={0.9} 
+                  fill="#77c940" 
+                  stroke="#68df07" 
+                  strokeWidth={2} 
+                  fillOpacity={0.95} 
                 />
               )}
             </ScatterChart>
@@ -283,14 +282,14 @@ export default function InsightsDashboard({ recommendations }) {
       </div>
 
       {/* Explanatory Math Info Panel */}
-      <div className="glass-panel p-6 rounded-2xl bg-indigo-950/15 border border-indigo-500/20 space-y-4">
-        <h3 className="text-base font-bold text-indigo-300 flex items-center gap-2">
-          <ShieldQuestion className="w-5 h-5" /> Explaining the Analytical Pipeline
+      <div className="glass-panel p-6 rounded-2xl bg-[#091f00]/40 border border-[#193d05] space-y-4">
+        <h3 className="text-base font-bold text-[#cdffb8] flex items-center gap-2">
+          <ShieldQuestion className="w-5 h-5 text-[#77c940]" /> Explaining the Analytical Pipeline
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-300 leading-relaxed font-sans">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-[#cdffb8] leading-relaxed font-sans">
           <div className="space-y-3">
-            <h4 className="font-bold text-slate-200">1. TF-IDF Genre Vectorization</h4>
-            <p>
+            <h4 className="font-bold text-white">1. TF-IDF Genre Vectorization</h4>
+            <p className="text-[#778d7e]">
               Rather than matching genres as arbitrary labels, the recommender fits a Term Frequency-Inverse Document Frequency (TF-IDF) vectorizer. 
               Genres that are rare across the dataset (e.g. <i>Film-Noir</i>, <i>IMAX</i>) carry higher weighting. 
               The user profile builds a matching vector (giving primary genres weight 1.0, secondary mood genres 0.5) and projects it into the shared TF-IDF space. 
@@ -299,11 +298,11 @@ export default function InsightsDashboard({ recommendations }) {
           </div>
           
           <div className="space-y-3">
-            <h4 className="font-bold text-slate-200">2. Bayesian Quality Smoothing</h4>
-            <p>
+            <h4 className="font-bold text-white">2. Bayesian Quality Smoothing</h4>
+            <p className="text-[#778d7e]">
               Simple average ratings are highly volatile for movies with low vote counts (a movie with one 5.0 rating shouldn't beat a movie with 500 reviews averaging 4.8). 
               We calculate an <b>IMDB Weighted Rating (WR)</b>, which acts as a Bayesian average. 
-              The minimum vote cutoff <code className="text-indigo-400 font-mono">m</code> is calculated dynamically based on your slider selection (percentiles 30% to 90%). 
+              The minimum vote cutoff <code className="text-[#77c940] font-mono">m</code> is calculated dynamically based on your slider selection (percentiles 30% to 90%). 
               This rating is min-max normalized across candidates, and combined with genre matching using a 60/40 blend.
             </p>
           </div>

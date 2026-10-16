@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Sparkles, Film, BarChart3, RefreshCw, AlertCircle } from "lucide-react";
+import { Film, BarChart3, RefreshCw, AlertCircle } from "lucide-react";
 import GenreQuiz from "./components/GenreQuiz";
 import RecommendationFeed from "./components/RecommendationFeed";
 import InsightsDashboard from "./components/InsightsDashboard";
@@ -36,20 +36,20 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-black text-[#cdffb8] flex flex-col font-sans transition-colors duration-300">
       
       {/* Premium Header */}
-      <header className="sticky top-0 z-50 bg-[#0F172A]/80 backdrop-blur-md border-b border-slate-800">
+      <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-[#081802]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={handleReset}>
-            <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-blue-500/10">
+            <div className="w-9 h-9 rounded-xl bg-[#050b05] border border-[#193d05] flex items-center justify-center text-[#77c940]">
               <Film className="w-5 h-5" />
             </div>
             <div>
               <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-1.5 font-sans">
-                PopcornStats <span className="text-xs text-blue-400 font-mono font-semibold px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md">Demo</span>
+                PopcornStats
               </h1>
-              <p className="text-[10px] text-slate-400 font-medium">Explainable Recommendation Engine</p>
+              <p className="text-[10px] text-[#778d7e] font-medium">Explainable Recommendation Engine</p>
             </div>
           </div>
 
@@ -62,24 +62,24 @@ export default function App() {
                   setActiveTab("quiz");
                 }
               }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-2xl text-sm font-semibold transition-all duration-200 flex items-center justify-center ${
                 activeTab === "quiz" || activeTab === "feed"
-                  ? "bg-slate-800 text-blue-400 border border-slate-700/60 shadow-lg shadow-blue-500/5"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-[#0c1f08] text-[#a5d98d] border border-[#1f4a13]"
+                  : "text-[#7c9081] hover:text-[#cdffb8]"
               }`}
             >
-              <Sparkles className="w-4 h-4" /> Recommender
+              Recommender
             </button>
             
             <button
               onClick={() => setActiveTab("insights")}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-2xl text-sm font-semibold transition-all duration-200 flex items-center justify-center ${
                 activeTab === "insights"
-                  ? "bg-slate-800 text-indigo-400 border border-slate-700/60 shadow-lg shadow-indigo-500/5"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-[#0c1f08] text-[#a5d98d] border border-[#1f4a13]"
+                  : "text-[#7c9081] hover:text-[#cdffb8]"
               }`}
             >
-              <BarChart3 className="w-4 h-4" /> Insights
+              Insights
             </button>
           </nav>
         </div>
